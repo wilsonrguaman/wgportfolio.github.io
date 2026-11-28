@@ -1,156 +1,71 @@
-
- window.addEventListener("load", () =>{
-        document.querySelector(".main").classList.remove("hidden");
-        document.querySelector(".home-section").classList.add("active");
-        /* ------- Page Loader ------ */ 
-        document.querySelector(".page-loader").classList.add("fade-out");
-        setTimeout(() =>{
-            document.querySelector(".page-loader").style.display = "none";
-        },600);
- });
-
-/* ------------- Toggle Navbar ------------ */ 
-const navToggler = document.querySelector(".nav-toggler");
-navToggler.addEventListener("click", () =>{
-  hideSection();
-  toggleNavbar();
-  document.body.classList.toggle("hide-scrolling");
+"use strict";
+const menu = document.querySelector("#menu"),
+  links = document.querySelector("#links"),
+  mobile = matchMedia("(max-width: 760px)");
+function syncMenu() {
+  menu.hidden = !mobile.matches;
+  links.hidden = mobile.matches;
+  menu.setAttribute("aria-expanded", "false");
+}
+syncMenu();
+mobile.addEventListener("change", syncMenu);
+menu.addEventListener("click", () => {
+  links.hidden = !links.hidden;
+  menu.setAttribute("aria-expanded", String(!links.hidden));
 });
-function hideSection(){
-    document.querySelector("section.active").classList.toggle("fade-out");
-}
-function toggleNavbar(){
-    document.querySelector(".header").classList.toggle("active");
-}
-
-/* ---------------- Active Section ---------------------- */
-document.addEventListener("click", (e) =>{
-   if(e.target.classList.contains("link-item") && e.target.hash !== ""){
-       // activate the overlay to prevent multiple clicks
-       document.querySelector(".overlay").classList.add("active");
-       navToggler.classList.add("hide");
-       if(e.target.classList.contains("nav-item")){
-           toggleNavbar();
-       }
-       else{
-           hideSection();
-           document.body.classList.add("hide-scrolling");
-       }
-       setTimeout(() =>{
-         document.querySelector("section.active").classList.remove("active","fade-out");
-         document.querySelector(e.target.hash).classList.add("active");
-         window.scrollTo(0,0);
-         document.body.classList.remove("hide-scrolling");
-         navToggler.classList.remove("hide");
-         document.querySelector(".overlay").classList.remove("active");
-       },500);
-   }
+links.addEventListener("click", (e) => {
+  if (mobile.matches && e.target.closest("a")) syncMenu();
 });
-
-/* -------------- About Tabs ---------------- */ 
-const tabsContainer = document.querySelector(".about-tabs"),
-aboutSection = document.querySelector(".about-section");
-
-tabsContainer.addEventListener("click", (e) =>{
-   if(e.target.classList.contains("tab-item") && !e.target.classList.contains("active")){
-       tabsContainer.querySelector(".active").classList.remove("active");
-       e.target.classList.add("active");
-       const target = e.target.getAttribute("data-target");
-       aboutSection.querySelector(".tab-content.active").classList.remove("active");
-       aboutSection.querySelector(target).classList.add("active");
-   }
+document.querySelectorAll("img[data-optional]").forEach((img) => {
+  const hide = () => {
+    img.hidden = true;
+  };
+  img.addEventListener("error", hide);
+  if (img.hasAttribute("src") && img.complete && !img.naturalWidth) hide();
 });
+document.querySelectorAll("details").forEach((d) =>
+  d.addEventListener("toggle", () => {
+    if (d.open)
+      d.querySelectorAll("img[data-src]").forEach((img) => {
+        if (!img.hasAttribute("src")) img.src = img.dataset.src;
+      });
+  }),
+);
 
-/* ----------------- Portfolio Item Details Popup ------------------ */ 
-
-
-document.addEventListener("click", (e) =>{
-    if(e.target.classList.contains("view-project-btn")){
-      togglePortfolioPopup();      
-      document.querySelector(".portfolio-popup").scrollTo(0,0);
-      portfolioItemDetails(e.target.parentElement);
-    }
-})
-function togglePortfolioPopup(){
-    document.querySelector(".portfolio-popup").classList.toggle("open");
-    document.body.classList.toggle("hide-scrolling");
-    document.querySelector(".main").classList.toggle("fade-out");
-}
-document.querySelector(".pp-close").addEventListener("click", togglePortfolioPopup);
-
-// hide popup when clicking outside of it
-document.addEventListener("click", (e) =>{
-    if(e.target.classList.contains("pp-inner")){
-        togglePortfolioPopup();
-    }
-}); 
-
-function portfolioItemDetails(portfolioItem){
-    document.querySelector(".pp-thumbnail img").src = 
-    portfolioItem.querySelector(".portfolio-item-thumbnail img").src;
-
-    document.querySelector(".pp-thumbnail iframe").src = 
-    portfolioItem.querySelector(".portfolio-item-thumbnail iframe").src;
-
-    document.querySelector(".pp-header h3").innerHTML = 
-    portfolioItem.querySelector(".portfolio-item-title").innerHTML;
-
-    document.querySelector(".pp-body").innerHTML = 
-    portfolioItem.querySelector(".portfolio-item-details").innerHTML;
-}
-
-/*=====================working an a new feature ==========
-//Validation to the new contack form
-const form = document.getElementById('contact-form');
-const name = document.getElementById('Name');
-const email = document.getElementById('Email');
-const subject = document.getElementById('Subject');
-const message = document.getElementById('Message');
-
-contact-form.addEventListener('submit', e => {
-    e.preventDefault();
-
-    validateInputs();
+// Preserve section and remember explicit language selection.
+document.querySelectorAll('.language-switch a').forEach(a => {
+  a.addEventListener('click', () => {
+    try { localStorage.setItem('portfolio-language', a.hreflang); } catch (_) {}
+    a.hash = location.hash;
+  });
 });
+try {
+  const preferred = localStorage.getItem('portfolio-language');
+  const path = location.pathname;
+  if (preferred === 'es' && document.documentElement.lang === 'en' && !location.hash && (path.endsWith('/') || path.endsWith('/index.html'))) {
+    location.replace('es.html');
+  }
+} catch (_) {}
 
-const setError =(element, message) => {
-    const inputControl = element.parentElement;
-    const errorDisplay = inputControl.querySelector('.error');
-
-    errorDisplay.innterText = message;
-    inputControl.classList.add('error');
-    inputControl.classList.remove('success');
+// Focused hash-based navigation; all content remains available without JS.
+const views = [...document.querySelectorAll('main > section')];
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+let currentView;
+function showView() {
+  const hash = location.hash.slice(1);
+  const id = ['education','learning'].includes(hash) ? 'about' : views.some(v=>v.id===hash) ? hash : 'home';
+  const view = document.getElementById(id);
+  views.forEach(v=>v.hidden=v!==view);
+  document.querySelectorAll('#links a').forEach(a=>{if(a.hash==='#'+id)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');});
+  if(currentView===id)return;
+  currentView=id;
+  window.scrollTo({top:0,behavior:'instant'});
+  const elements=id==='home'?view.querySelectorAll('.hero .eyebrow,.hero h1,.hero h2,.hero .lead,.hero .actions,.hero .availability,.hero .career-tags,.portrait'):view.querySelectorAll(':scope > .eyebrow,:scope > h2,:scope > .lead,.timeline > article,.projects > article,.featured,.aboutgrid,.analytics > article,:scope > .grid > .metric,#contact article');
+  elements.forEach((el,i)=>{el.classList.remove('reveal');void el.offsetWidth;el.style.setProperty('--delay',Math.min(i*110,650)+'ms');el.classList.add('reveal');});
+  if(id==='analytics'&&!reduced.matches){view.querySelectorAll('.metric strong').forEach(el=>{const target=el.dataset.original||el.textContent;el.dataset.original=target;const m=target.match(/^([≈+$]*)([\d,.]+)(K|%)?$/);if(!m)return;const n=Number(m[2].replace(/,/g,''));const decimals=m[2].includes('.')?1:0;const start=performance.now();function tick(now){const t=Math.min((now-start)/650,1);el.textContent=t===1?target:m[1]+(n*(1-Math.pow(1-t,3))).toLocaleString('en-US',{minimumFractionDigits:decimals,maximumFractionDigits:decimals})+(m[3]||'');if(t<1)requestAnimationFrame(tick);}requestAnimationFrame(tick);});}
 }
-const setSuccess = element => {
-    const inputControl = element.parentElement;
-    const errorDisplay = inputControl.querySelector('error');
-
-    errorDisplay.innterText = '';
-    inputControl.classList.add('success');
-    inputControl.classList.remove('error');
-}
-const isValidEmail = email => {
-    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-    return re.test(String(email).toLowerCase());
-}
-
-const validateInputs =() => {
-    const nameValue = name.value.trim();
-    const emailValue = email.value.trim();
-    const subjectValue = subject.value.trim();
-    const messageValue = message.value.trim();
-
-    if(nameValue == ''){
-        setError(name, 'name is required');                                                                                
-    }else{
-        setSuccess(nameValue);
-    }
-    if(emailValue== ''){
-        setError(email, 'Email is required');
-    }else if (!isValidEmail(emailValue)){
-        setError(email, 'Provide a valid email address');
-    }else{
-        setSuccess(email);
-    }
-}
-===============*/
+window.addEventListener('hashchange',showView);showView();
+const lightbox=document.querySelector('#lightbox');
+document.querySelectorAll('.evidence img').forEach(img=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-label',img.alt);img.before(b);b.append(img);b.addEventListener('click',()=>{const large=lightbox.querySelector('img');large.src=img.src||img.dataset.src;large.alt=img.alt;lightbox.showModal();});});
+document.querySelector('#close-lightbox').addEventListener('click',()=>lightbox.close());
+lightbox.addEventListener('click',e=>{if(e.target===lightbox)lightbox.close();});
